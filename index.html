@@ -6,297 +6,675 @@
 <title>Комірник — пітч</title>
 <meta name="description" content="Автоматизація видачі сировини на виробничі лінії: як працює, по фазах, що потрібно від адміна 1С і складу.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&display=swap">
+
 <style>
+/* ─── tokens: identical to the Fiverr strategy page ─────────────── */
 :root{
-  --bg:#f6f4ef; --surface:#ffffff; --ink:#1c1b19; --muted:#6b675f; --line:#dedad1;
-  --accent:#d9480f; --accent-soft:#fde8dc; --ok:#2b8a3e; --ok-soft:#e3f4e6; --warn:#b08900; --warn-soft:#fbf1cc;
-  --r:14px;
+  --bg:#ffffff;
+  --layer:#fafafa;
+  --layer-2:#eeeeee;
+  --line:#e6e6e6;
+  --line-strong:#cccccc;
+  --text:#5c5c5c;
+  --faint:#707070;
+  --strong:#161616;
+  --inverted:#ffffff;
+  --hi:#e2f3ea;
+  --hi-ink:#0b6b40;
+  --brand:#0f8a52;
+  --brand-ink:#ffffff;
+  --stop:#a4271c;
+
+  --pad:5rem; --vpad:4rem;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#141311; --surface:#1d1c19; --ink:#f1eee8; --muted:#a29d93; --line:#34322d;
-    --accent:#ff7a3d; --accent-soft:#3a2216; --ok:#69db7c; --ok-soft:#1b2e1f; --warn:#ffd43b; --warn-soft:#332b12;
+    --bg:#161616;
+    --layer:#242424;
+    --layer-2:#303030;
+    --line:#2d2d2d;
+    --line-strong:#454545;
+    --text:#d4d4d4;
+    --faint:#a3a3a3;
+    --strong:#ffffff;
+    --inverted:#161616;
+    --hi:#12301f;
+    --hi-ink:#1dbf73;
+    --brand:#1dbf73;
+    --brand-ink:#161616;
+    --stop:#e8836f;
   }
 }
 :root[data-theme="dark"]{
-  --bg:#141311; --surface:#1d1c19; --ink:#f1eee8; --muted:#a29d93; --line:#34322d;
-  --accent:#ff7a3d; --accent-soft:#3a2216; --ok:#69db7c; --ok-soft:#1b2e1f; --warn:#ffd43b; --warn-soft:#332b12;
+  --bg:#161616;
+  --layer:#242424;
+  --layer-2:#303030;
+  --line:#2d2d2d;
+  --line-strong:#454545;
+  --text:#d4d4d4;
+  --faint:#a3a3a3;
+  --strong:#ffffff;
+  --inverted:#161616;
+  --hi:#12301f;
+  --hi-ink:#1dbf73;
+  --brand:#1dbf73;
+  --brand-ink:#161616;
+  --stop:#e8836f;
 }
-*{box-sizing:border-box;margin:0}
-html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
-body{background:var(--bg);color:var(--ink);font:16px/1.55 Manrope,system-ui,sans-serif;overflow-x:hidden}
-.slide{min-height:100vh;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;
-  padding:64px max(16px,calc((100vw - 1040px)/2));border-bottom:1px solid var(--line)}
-.kicker{font:600 13px/1 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
-h1{font-size:clamp(40px,7vw,84px);line-height:1;font-weight:800;letter-spacing:-.03em}
-h2{font-size:clamp(28px,4vw,44px);line-height:1.1;font-weight:800;letter-spacing:-.02em;margin-bottom:24px}
-h3{font-size:18px;font-weight:800;margin-bottom:8px}
-p.lead{font-size:clamp(18px,2.2vw,22px);color:var(--muted);max-width:720px;margin-top:20px}
-.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
-.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
-.card p,.card li{color:var(--muted);font-size:15px}
-ul{padding-left:18px}
-li{margin:4px 0}
-.tag{display:inline-block;font:600 12px/1 "JetBrains Mono",monospace;padding:5px 8px;border-radius:6px;margin-bottom:10px}
-.t-ok{background:var(--ok-soft);color:var(--ok)} .t-warn{background:var(--warn-soft);color:var(--warn)} .t-acc{background:var(--accent-soft);color:var(--accent)}
-table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;font-size:15px}
-th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font:600 12px/1.2 "JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-tr:last-child td{border-bottom:0}
-.scroll{overflow-x:auto}
-.formula{font:600 clamp(15px,2vw,20px)/1.4 "JetBrains Mono",monospace;background:var(--surface);border:1px solid var(--line);
-  border-left:4px solid var(--accent);border-radius:var(--r);padding:18px 20px;margin-top:24px}
-svg{width:100%;height:auto;display:block}
-svg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
-svg .box-acc{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
-svg .box-ok{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
-svg text{fill:var(--ink);font:600 14px Manrope,sans-serif}
-svg .sm{fill:var(--muted);font:400 12px Manrope,sans-serif}
-svg .arr{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#a)}
-svg .arr-acc{stroke:var(--accent);stroke-width:2;fill:none;marker-end:url(#a2)}
-.diagram{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:20px}
-.nav{position:fixed;right:16px;bottom:16px;display:flex;gap:6px;z-index:5}
-.nav button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:18px;cursor:pointer}
-.phase-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
-.pill{font:600 13px/1 "JetBrains Mono",monospace;padding:8px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
-.pill.on{background:var(--accent);border-color:var(--accent);color:#fff}
-@media print{.slide{min-height:auto;page-break-after:always}.nav{display:none}}
+@media (max-width:60rem){ :root{--pad:24px; --vpad:3rem} }
+
+html{scroll-behavior:smooth}
+*{box-sizing:border-box}
+::selection{background:var(--hi); color:var(--hi-ink)}
+
+body{
+  margin:0; min-width:320px; background:var(--bg); color:var(--text);
+  font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:15px; font-synthesis:none; -webkit-font-smoothing:antialiased;
+}
+p{line-height:200%; margin:0}
+@media (max-width:60rem){ body{font-size:14px} p{line-height:180%} }
+strong,b{font-weight:500; color:var(--strong)}
+a{color:var(--brand); text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:1px}
+:focus-visible{outline:2px solid var(--brand); outline-offset:2px}
+
+.container{
+  max-width:67.5rem; margin:0 auto;
+  border-left:1px solid var(--line);
+  border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line);
+}
+@media (max-width:65rem){ .container{border:none} }
+
+/* ─── badge ──────────────────────────────────────────────────────── */
+.badge{
+  display:inline-block; padding:4px 8px; line-height:1; font-size:13px; font-weight:500;
+  background:var(--strong); color:var(--inverted); white-space:nowrap; flex-shrink:0;
+}
+.badge.ghost{background:transparent; color:var(--strong); box-shadow:inset 0 0 0 1px var(--line-strong)}
+.badge.soft{background:var(--layer-2); color:var(--text)}
+.badge.mark{background:var(--hi); color:var(--hi-ink)}
+.badge.num{background:var(--layer-2); color:var(--faint); font-variant-numeric:tabular-nums}
+.badge.role{min-width:8ch; text-align:center}
+.badge.role:not(.ghost):not(.soft){background:var(--brand); color:var(--brand-ink)}
+
+/* ─── sticky top ─────────────────────────────────────────────────── */
+.top{
+  position:sticky; top:0; z-index:10; min-height:80px;
+  padding:24px var(--pad); display:flex; align-items:center; justify-content:space-between;
+  gap:24px; background:var(--bg); border-bottom:1px solid var(--line);
+}
+.top .mark{font-weight:700; color:var(--strong); letter-spacing:-.02em; white-space:nowrap;
+  font-size:20px; line-height:1.35; text-decoration:none}
+.top .mark .dot{color:var(--brand)}
+.top .mark:hover{text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:1px}
+@media (max-width:60rem){ .top .mark{font-size:18px} }
+.top nav{display:flex; gap:32px}
+.top nav a{color:var(--strong); text-decoration:none; white-space:nowrap}
+.top nav a:hover{text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:1px}
+@media (max-width:55rem){ .top nav{gap:20px} }
+@media (max-width:44rem){ .top nav{display:none} }
+
+/* прогрес читання: лінія по нижньому краю .top; без підтримки — не рендериться */
+@supports (animation-timeline: scroll()){
+  .top::after{content:""; position:absolute; left:0; right:0; bottom:-1px; height:2px;
+    background:var(--brand); transform-origin:0 50%; transform:scaleX(0);
+    animation:contour-progress linear both; animation-timeline:scroll(root)}
+  @keyframes contour-progress{to{transform:scaleX(1)}}
+}
+
+/* ─── sections ───────────────────────────────────────────────────── */
+section{padding:var(--vpad) var(--pad); border-top:1px solid var(--line)}
+section:first-of-type{border-top:none}
+.hero{padding:calc(var(--vpad) * 2) var(--pad) var(--vpad)}
+@media (max-width:30rem){ .hero{padding:var(--vpad) var(--pad)} }
+
+h1{
+  font-size:28px; font-weight:700; color:var(--strong);
+  margin:0 0 16px; line-height:1.35; letter-spacing:-.02em; text-wrap:balance;
+}
+@media (max-width:60rem){ h1{font-size:22px} }
+.kicker{color:var(--faint); margin:0 0 20px}
+.hero p.lede{max-width:82%}
+@media (max-width:50rem){ .hero p.lede{max-width:100%} }
+
+.title{margin:0 0 24px}
+.title h3{font-size:16px; font-weight:700; color:var(--strong); margin:0 0 12px}
+.title p{color:var(--text); max-width:64ch}
+
+/* ─── number cells ───────────────────────────────────────────────── */
+.cells{
+  display:flex; flex-wrap:wrap;
+  margin:calc(var(--vpad) * 2) calc(var(--pad) * -1) calc(var(--vpad) * -1);
+  border-top:1px solid var(--line);
+}
+@media (max-width:30rem){ .cells{margin-top:var(--vpad)} }
+.cells > div{flex:1 1 14rem; padding:2rem var(--pad); text-align:center}
+.cells > div + div{border-left:1px solid var(--line)}
+@media (max-width:60rem){ .cells > div{padding:1.5rem var(--pad)} }
+@media (max-width:44rem){
+  .cells > div{flex:1 0 100%; border-top:1px solid var(--line)}
+  .cells > div + div{border-left:none}
+  .cells > div:first-child{border-top:none}
+}
+.cells .lab{color:var(--faint)}
+.cells .val{color:var(--strong); font-weight:500; font-size:28px; line-height:1.35;
+  letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+@media (max-width:60rem){ .cells .val{font-size:22px} }
+
+/* ─── inline ─────────────────────────────────────────────────────── */
+.hl{background:var(--hi); color:var(--hi-ink); padding:2px 6px}
+code{font-family:inherit; font-size:.94em; color:var(--strong); background:var(--layer); padding:1px 5px}
+pre{
+  font-family:inherit; font-size:.9em; line-height:190%; color:var(--text);
+  background:var(--layer); box-shadow:inset 0 0 0 1px var(--line);
+  padding:14px 18px; margin:0; overflow-x:auto;
+}
+pre code{background:none; padding:0}
+
+/* ─── tables: closed box ─────────────────────────────────────────── */
+.tw{box-shadow:inset 0 0 0 1px var(--line); overflow-x:auto}
+table{border-collapse:collapse; width:100%; min-width:34rem; font-size:inherit}
+th,td{text-align:left; padding:14px 20px; border-bottom:1px solid var(--line); vertical-align:top; line-height:170%}
+th + th,td + td{border-left:1px solid var(--line)}
+thead th{color:var(--faint); font-weight:400; background:var(--layer)}
+tbody tr:last-child td{border-bottom:none}
+td.k{color:var(--strong); font-weight:500}
+td.num{color:var(--faint); font-variant-numeric:tabular-nums; white-space:nowrap}
+td.b .badge{margin-bottom:0}
+.tw.wide table{min-width:58rem}
+.tw.wide th,.tw.wide td{padding:16px 20px}
+
+/* ─── callout ────────────────────────────────────────────────────── */
+.callout{
+  margin-top:24px; box-shadow:inset 0 0 0 1px var(--line); background:var(--layer);
+  padding:20px; display:flex; gap:16px; align-items:baseline;
+}
+.callout p{color:var(--text)}
+.callout .body{flex:1}
+.callout .body p + p{margin-top:12px}
+@media (max-width:44rem){ .callout{flex-direction:column; gap:12px; padding:16px} }
+
+/* ─── figure: схема, діаграма ────────────────────────────────────── */
+.fig{box-shadow:inset 0 0 0 1px var(--line); background:var(--layer); overflow-x:auto}
+.fig > svg{display:block; margin:0 auto; padding:28px 24px; box-sizing:content-box}
+@media (max-width:44rem){ .fig > svg{padding:20px 16px} }
+.fig .ln{stroke:var(--line-strong); stroke-width:1; fill:none}
+.fig .ln.em{stroke:var(--brand)}
+.fig .ah{fill:var(--line-strong); stroke:none}
+.fig .ah.em{fill:var(--brand)}
+.fig .bx{fill:var(--bg); stroke:var(--line-strong); stroke-width:1}
+.fig .bx.em{fill:var(--hi); stroke:var(--hi-ink)}
+.fig .bx.mute{fill:var(--layer-2); stroke:var(--line-strong)}
+.fig text{font-family:inherit; font-size:14px; fill:var(--text)}
+.fig text.t{fill:var(--strong); font-weight:500}
+.fig text.f{fill:var(--faint); font-size:13px}
+.fig text.em{fill:var(--hi-ink); font-weight:500}
+.figcap{color:var(--faint); font-size:13px; line-height:180%; margin:12px 0 0}
+
+/* ─── step card ──────────────────────────────────────────────────── */
+.step{padding:28px 24px; box-shadow:inset 0 0 0 1px var(--line)}
+@media (max-width:44rem){ .step{padding:20px 16px} }
+.step > * + *{margin-top:16px}
+.step{position:relative}
+.step .head{display:flex; align-items:flex-start; gap:12px}
+.step .head .badge.role{position:absolute; top:0; right:0}
+.step .head .badge.role.ghost{background:var(--line); box-shadow:none}
+.step h4{margin:12px 0 0; font-size:16px; font-weight:700; color:var(--strong); line-height:1.35}
+.io{color:var(--faint); border-top:1px solid var(--line); padding-top:14px; line-height:180%;
+  display:flex; flex-wrap:wrap; align-items:center; gap:4px 12px}
+.io b{color:var(--strong); font-weight:500}
+.io .a{color:var(--line-strong); vertical-align:middle; margin-right:8px; flex:none}
+ul.marks{margin:0; padding:0; list-style:none}
+ul.marks li{display:flex; gap:12px; margin-bottom:12px; line-height:180%}
+ul.marks li:last-child{margin-bottom:0}
+ul.marks li::before{content:"—"; color:var(--faint); flex:none}
+
+
+/* ─── controls ───────────────────────────────────────────────────── */
+.btn{
+  font-family:inherit; font-size:14px; font-weight:500; line-height:1;
+  padding:13px 20px; border:0; cursor:pointer; white-space:nowrap;
+  background:var(--strong); color:var(--inverted);
+  transition:opacity .15s ease, background .15s ease;
+}
+.btn:hover{opacity:.82}
+.btn.brand{background:var(--brand); color:var(--brand-ink)}
+.btn.secondary{background:transparent; color:var(--strong); box-shadow:inset 0 0 0 1px var(--line-strong)}
+.btn.secondary:hover{opacity:1; background:var(--layer-2)}
+.btn.ghost{background:transparent; color:var(--faint); padding-left:0; padding-right:0}
+.btn.ghost:hover{opacity:1; color:var(--strong); text-decoration:underline;
+  text-underline-offset:4px; text-decoration-thickness:1px}
+.btn.danger{background:var(--stop); color:#ffffff}
+.btn.sm{font-size:13px; padding:9px 14px}
+.btn[disabled]{opacity:.4; cursor:not-allowed}
+.btn[disabled]:hover{opacity:.4}
+.btn-row{display:flex; flex-wrap:wrap; gap:12px; align-items:center}
+
+.field{display:grid; gap:8px; min-width:0}
+.field .lab{font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--faint)}
+.field .hint{font-size:11px; color:var(--faint); line-height:170%}
+.field.bad .hint{color:var(--stop)}
+.input{
+  font-family:inherit; font-size:14px; color:var(--strong); width:100%;
+  background:var(--bg); border:0; box-shadow:inset 0 0 0 1px var(--line-strong);
+  padding:12px 14px; transition:box-shadow .15s ease;
+}
+.input::placeholder{color:var(--faint)}
+.input:focus{outline:none; box-shadow:inset 0 0 0 2px var(--brand)}
+.input[disabled]{opacity:.45; cursor:not-allowed; background:var(--layer)}
+.field.bad .input{box-shadow:inset 0 0 0 1px var(--stop)}
+textarea.input{resize:vertical; min-height:6rem; line-height:180%}
+
+.selectwrap{position:relative; display:block}
+.selectwrap select{appearance:none; -webkit-appearance:none; padding-right:38px}
+.selectwrap::after{
+  content:""; position:absolute; right:15px; top:50%; width:7px; height:7px;
+  border-right:1.5px solid var(--faint); border-bottom:1.5px solid var(--faint);
+  transform:translateY(-70%) rotate(45deg); pointer-events:none;
+}
+
+.check{display:flex; gap:12px; align-items:flex-start; cursor:pointer; line-height:170%}
+.check input{position:absolute; width:1px; height:1px; opacity:0}
+.check .box{
+  width:20px; height:20px; flex:none; margin-top:3px; position:relative;
+  background:var(--layer-2); box-shadow:inset 0 0 0 1px var(--line-strong);
+  transition:background .15s ease, box-shadow .15s ease;
+}
+.check input:checked + .box{background:var(--brand); box-shadow:inset 0 0 0 1px var(--brand)}
+.check input:checked + .box::after{
+  content:""; position:absolute; left:7px; top:3px; width:5px; height:10px;
+  border-right:2px solid var(--brand-ink); border-bottom:2px solid var(--brand-ink);
+  transform:rotate(45deg);
+}
+.check input:focus-visible + .box{outline:2px solid var(--brand); outline-offset:2px}
+
+.switch{display:inline-flex; gap:12px; align-items:center; cursor:pointer}
+.switch input{position:absolute; width:1px; height:1px; opacity:0}
+.track{
+  width:44px; height:22px; flex:none; position:relative; background:var(--layer-2);
+  box-shadow:inset 0 0 0 1px var(--line-strong); transition:background .15s ease, box-shadow .15s ease;
+}
+.knob{position:absolute; top:3px; left:3px; width:16px; height:16px; background:var(--faint);
+  transition:transform .15s ease, background .15s ease}
+.switch input:checked + .track{background:var(--brand); box-shadow:inset 0 0 0 1px var(--brand)}
+.switch input:checked + .track .knob{transform:translateX(22px); background:var(--brand-ink)}
+.switch input:focus-visible + .track{outline:2px solid var(--brand); outline-offset:2px}
+
+.tabs{display:flex; flex-wrap:wrap; box-shadow:inset 0 -1px 0 var(--line)}
+.tab{
+  font-family:inherit; font-size:14px; background:none; border:0; cursor:pointer;
+  padding:13px 18px; color:var(--faint); box-shadow:inset 0 -2px 0 transparent;
+  transition:color .15s ease, box-shadow .15s ease;
+}
+.tab:hover{color:var(--strong)}
+.tab[aria-selected="true"]{color:var(--strong); font-weight:500; box-shadow:inset 0 -2px 0 var(--brand)}
+
+.range{
+  -webkit-appearance:none; appearance:none; width:100%; height:2px;
+  background:var(--line-strong); outline:none; margin:14px 0;
+}
+.range::-webkit-slider-thumb{-webkit-appearance:none; width:14px; height:14px;
+  background:var(--brand); cursor:pointer}
+.range::-moz-range-thumb{width:14px; height:14px; background:var(--brand); border:0; cursor:pointer}
+.range:focus-visible{outline:2px solid var(--brand); outline-offset:6px}
+
+.formrow{display:flex; gap:12px; align-items:stretch; flex-wrap:wrap}
+.formrow .field{flex:1 1 16rem}
+.grid2{display:grid; grid-template-columns:repeat(auto-fit, minmax(16rem, 1fr)); gap:20px}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{transition-duration:.01ms !important; animation-duration:.01ms !important}
+}
+
+/* ─── storybook chrome ───────────────────────────────────────────── */
+.swatches{display:grid; grid-template-columns:repeat(auto-fill, minmax(9rem, 1fr)); gap:1px;
+  background:var(--line); box-shadow:inset 0 0 0 1px var(--line)}
+.sw{background:var(--bg); padding:0}
+.sw .chip{height:72px; border-bottom:1px solid var(--line)}
+.sw .meta{padding:12px 14px}
+.sw .name{color:var(--strong); font-size:13px; font-weight:500}
+.sw .use{color:var(--faint); font-size:11px; line-height:170%; margin-top:4px}
+
+.demo{
+  box-shadow:inset 0 0 0 1px var(--line); background:var(--layer);
+  padding:28px 24px; display:flex; flex-wrap:wrap; gap:16px; align-items:center;
+}
+.demo.block{display:block}
+.demo.plain{background:none}
+@media (max-width:44rem){ .demo{padding:20px 16px} }
+
+.pair{display:grid; gap:16px; margin-bottom:32px}
+.pair:last-child{margin-bottom:0}
+.pair > h4{
+  margin:0; font-size:13px; font-weight:500; color:var(--faint);
+  letter-spacing:.08em; text-transform:uppercase;
+}
+
+.scale{box-shadow:inset 0 0 0 1px var(--line)}
+.scale-row{display:flex; gap:24px; align-items:baseline; padding:20px 24px; border-bottom:1px solid var(--line)}
+.scale-row:last-child{border-bottom:none}
+.scale-row .val{color:var(--faint); font-size:11px; font-variant-numeric:tabular-nums;
+  white-space:nowrap; width:11ch; flex:none}
+.scale-row .demo-t{color:var(--strong); min-width:0; overflow:hidden; text-overflow:ellipsis}
+
+.bars{display:flex; flex-direction:column; gap:14px}
+.bar-row{display:flex; gap:20px; align-items:center}
+.bar-row .val{color:var(--faint); font-size:11px; font-variant-numeric:tabular-nums;
+  white-space:nowrap; width:14ch; flex:none}
+.bar{height:14px; background:var(--brand); opacity:.75; flex:none; max-width:100%}
+
+footer{max-width:67.5rem; margin:0 auto; padding:3rem var(--pad) 4rem; text-align:center}
+.fnav{display:flex; flex-wrap:wrap; justify-content:center; align-items:baseline;
+  gap:14px 36px; font-size:13px; color:var(--faint)}
+.fnav a{color:var(--faint); text-decoration:none}
+.fnav a:hover{color:var(--strong); text-decoration:underline; text-underline-offset:4px; text-decoration-thickness:1px}
+.legal{max-width:56rem; margin:20px auto 0; color:var(--faint); font-size:13px; line-height:190%}
 </style>
 </head>
 <body>
+<div class="container" id="top">
 
-<svg width="0" height="0" style="position:absolute">
-  <defs>
-    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker>
-    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>
-  </defs>
-</svg>
-
-<!-- 1 -->
-<section class="slide">
-  <div class="kicker">Delicia · склад сировини</div>
-  <h1>Комірник</h1>
-  <p class="lead">Автоматизація видачі сировини на 6 виробничих ліній. Як це працюватиме щодня, по фазах, і що потрібно від адміністратора 1С та складу.</p>
-</section>
-
-<!-- 2 -->
-<section class="slide">
-  <div class="kicker">Проблема</div>
-  <h2>Цифри на початок і на кінець дня не сходяться</h2>
-  <div class="grid">
-    <div class="card"><h3>Замовлення на завтра</h3><p>Норма + «запас зверху» з голови. Кількості в Требовании правляться вручну під мішки й тару.</p></div>
-    <div class="card"><h3>Довидача</h3><p>Людина з лінії приходить сама, запис на листочку. В 1С потрапляє пізно, через звіти бригад.</p></div>
-    <div class="card"><h3>Серії й партії</h3><p>«Старыми сериями» ставить одну серію на рядок. Не вистачає — помилка, рядок ділиться вручну.</p></div>
-    <div class="card"><h3>Залишки на лініях</h3><p>Бригади здають звіти, але точність не перевірена. «Остаток в производстве» не віднімається.</p></div>
+  <div class="top">
+    <a class="mark" href="#top">komirnyk<span class="dot">.</span></a>
+    <nav>
+      <a href="#why">Навіщо</a>
+      <a href="#time">Час</a>
+      <a href="#how">Як працює</a>
+      <a href="#phases">Фази</a>
+      <a href="#admin">Адміну 1С</a>
+      <a href="#next">Далі</a>
+    </nav>
   </div>
-  <div class="formula">Мета: видано на лінію = використано за нормою + залишок на лінії + списання</div>
-</section>
 
-<!-- 3 -->
-<section class="slide">
-  <div class="kicker">Принципи</div>
-  <h2>Чому це безпечно для процесу</h2>
-  <div class="grid">
-    <div class="card"><span class="tag t-ok">1С</span><h3>1С не змінюємо</h3><p>Ні конфігурацію, ні дані. Тільки читаємо вивантажені звіти. Excel — це копія, оригінал не чіпається.</p></div>
-    <div class="card"><span class="tag t-ok">Паралельно</span><h3>Спершу поруч</h3><p>Склад працює як зараз, ми рахуємо те саме поруч. Помилка в розрахунку — наша, не складу.</p></div>
-    <div class="card"><span class="tag t-ok">Людина</span><h3>Рішення за складом</h3><p>Програма готує цифри. Перевіряє, затверджує й проводить документи людина.</p></div>
-    <div class="card"><span class="tag t-ok">Стоп</span><h3>Відмова будь-коли</h3><p>Перестали вивантажувати файли — усе як було. Кожна фаза стартує лише після згоди на попередню.</p></div>
-  </div>
-</section>
+  <section class="hero">
+    <p class="kicker">Delicia · склад сировини</p>
+    <h1>Комірник</h1>
+    <p class="lede">Автоматизація видачі сировини на 6 виробничих ліній. Як це працюватиме щодня, по фазах, і що потрібно від адміністратора 1С та складу.</p>
+    <div class="cells">
+      <div><p class="lab">Виробничих ліній</p><p class="val">6</p></div>
+      <div><p class="lab">Фази</p><p class="val">3</p></div>
+    </div>
+  </section>
 
-<!-- 4 -->
-<section class="slide">
-  <div class="kicker">Як працює</div>
-  <h2>Загальна схема</h2>
-  <div class="diagram">
-    <svg viewBox="0 0 1000 330" role="img" aria-label="Схема: 1С, вивантаження, сервіс Комірник, звіт і бот ліній">
-      <rect class="box" x="10" y="120" width="170" height="90" rx="12"/>
-      <text x="95" y="160" text-anchor="middle">1С УПП</text>
-      <text class="sm" x="95" y="182" text-anchor="middle">лише читання</text>
+  <section id="why">
+    <div class="title">
+      <p class="kicker">Навіщо проєкт</p>
+      <h3>Сировина на лінії на ранок без ручного рахунку, і баланс по кожній лінії сходиться</h3>
+      <p>Сьогодні розбіжність видно лише в кінці місяця, і ніхто не знає, де саме вона виникла: на видачі, довидачі, списанні чи залишках.</p>
+    </div>
+    <div class="callout">
+      <span class="badge mark">Баланс</span>
+      <div class="body"><p><strong>видано = використано + залишок + списання</strong></p></div>
+    </div>
+  </section>
 
-      <rect class="box" x="240" y="120" width="170" height="90" rx="12"/>
-      <text x="325" y="160" text-anchor="middle">Вивантаження</text>
-      <text class="sm" x="325" y="182" text-anchor="middle">Excel → папка RDP</text>
+  <section id="rid">
+    <div class="title">
+      <p class="kicker">Від чого позбуваємось</p>
+      <h3>Сім ручних операцій, які зникають</h3>
+    </div>
+    <ul class="marks">
+      <li>Замовлення на завтра з голови й ручні правки під тару</li>
+      <li>Двічі друк листа комплектації (тісто / желе) по кожній лінії</li>
+      <li>Листочки довидачі й перенесення звітів бригад у 1С</li>
+      <li>Ручне ділення рядків по серіях і помилки «Не списано по партиям»</li>
+      <li>«Хвости» партій, що висять роками (30 кг з 30 т)</li>
+      <li>Ходіння лінії на склад «спитати, чи є»</li>
+      <li>Пошук розбіжностей у кінці місяця</li>
+    </ul>
+  </section>
 
-      <rect class="box-acc" x="470" y="100" width="220" height="130" rx="12"/>
-      <text x="580" y="140" text-anchor="middle">Сервіс Комірник</text>
-      <text class="sm" x="580" y="164" text-anchor="middle">норми · запас · правила ліній</text>
-      <text class="sm" x="580" y="184" text-anchor="middle">баланс · FIFO · прогноз</text>
-      <text class="sm" x="580" y="204" text-anchor="middle">журнал видач</text>
+  <section id="time">
+    <div class="title">
+      <p class="kicker">Час</p>
+      <h3>Без автоматизації і з нею: ≈ 3–3,5 год на день → ≈ 20–25 хв</h3>
+      <p>На день, 6 ліній.</p>
+    </div>
+    <div class="tw wide">
+      <table>
+        <thead><tr><th>Операція</th><th>Зараз</th><th>Фаза 2</th><th>Фаза 3</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Замовлення на завтра (норма + запас + тара)</td><td>6 × 10 хв = 60 хв</td><td>перевірити готове: 15 хв</td><td>затвердити чернетки: 5–10 хв</td></tr>
+          <tr><td class="k">Лист комплектації тісто/желе</td><td>6 × 2 × 5 хв = 60 хв</td><td>0, на телефоні</td><td>0</td></tr>
+          <tr><td class="k">Ділення серій у Требованиях</td><td>6 × 5 хв = 30 хв</td><td>0 після зміни налаштування</td><td>0</td></tr>
+          <tr><td class="k">Довидача: записати й перенести в 1С</td><td>~8 разів × 5 хв = 40 хв</td><td>у боті ~1 хв: 8 хв</td><td>8 хв, документ сам</td></tr>
+          <tr><td class="k">Звірка / пошук розбіжностей</td><td>години в кінці місяця</td><td>щоранку 10 хв</td><td>5 хв, лише винятки</td></tr>
+          <tr><td class="k">Разом на день</td><td><strong>≈ 3–3,5 год</strong></td><td><strong>≈ 40 хв</strong></td><td><strong>≈ 20–25 хв</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <span class="badge mark">Оцінка</span>
+      <div class="body"><p><strong>Ручна робота складу −75–85%</strong></p><p>Оцінка · перевіряємо у фазі 1 заміром.</p><p>≈ 2,5–3 год на день, ≈ 55–65 год на місяць на 2 людей, що зараз заносять дані.</p></div>
+    </div>
+  </section>
 
-      <rect class="box-ok" x="760" y="20" width="230" height="80" rx="12"/>
-      <text x="875" y="55" text-anchor="middle">Звіт «сходиться / ні»</text>
-      <text class="sm" x="875" y="77" text-anchor="middle">щоранку, по лініях</text>
+  <section id="better">
+    <div class="title">
+      <p class="kicker">Що покращиться</p>
+      <h3>Шість метрик, які міряємо</h3>
+    </div>
+    <div class="tw wide">
+      <table>
+        <thead><tr><th>Метрика</th><th>Зараз</th><th>Ціль (оцінка)</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Розбіжність видано vs норма по лініях</td><td>невідома → міряємо у фазі 1 у кг і грн</td><td>кожна розбіжність &gt; 3% або &gt; 5 кг пояснена в той самий день</td></tr>
+          <tr><td class="k">Довидачі поза 1С</td><td>частина губиться</td><td>0, кожна з часом і людиною</td></tr>
+          <tr><td class="k">Ходіння лінії на склад</td><td></td><td>−50% за рахунок точнішої видачі зранку й черги в боті</td></tr>
+          <tr><td class="k">«Запас зверху»</td><td>на око</td><td>рахується з історії довидач, надлишок сировини на лініях зменшується</td></tr>
+          <tr><td class="k">Зависання партій («хвости»)</td><td></td><td>0 завдяки FIFO</td></tr>
+          <tr><td class="k">Час від помилки до виявлення</td><td>місяць</td><td>1 день</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <span class="badge mark">Оцінка</span>
+      <div class="body"><p>Оцінка · перевіряємо у фазі 1 заміром.</p></div>
+    </div>
+  </section>
 
-      <rect class="box-ok" x="760" y="125" width="230" height="80" rx="12"/>
-      <text x="875" y="160" text-anchor="middle">Видача на завтра</text>
-      <text class="sm" x="875" y="182" text-anchor="middle">тісто / желе, під тару</text>
+  <section id="nopromise">
+    <div class="title">
+      <p class="kicker">Що НЕ обіцяємо</p>
+      <h3>Межі проєкту</h3>
+    </div>
+    <ul class="marks">
+      <li>Не замінюємо людей на складі: фізично зібрати й віднести лишається людям</li>
+      <li>Не чіпаємо 1С</li>
+      <li>Точні відсотки даємо після заміру у фазі 1 (1 день × 6 ліній)</li>
+    </ul>
+  </section>
 
-      <rect class="box-ok" x="760" y="230" width="230" height="80" rx="12"/>
-      <text x="875" y="265" text-anchor="middle">Бот ліній</text>
-      <text class="sm" x="875" y="287" text-anchor="middle">довидача, залишки</text>
+  <section id="problem">
+    <div class="title">
+      <p class="kicker">Проблема</p>
+      <h3>Цифри на початок і на кінець дня не сходяться</h3>
+    </div>
+    <div class="grid2">
+      <div class="step"><h4>Замовлення на завтра</h4><p>Норма + «запас зверху» з голови. Кількості в Требовании правляться вручну під мішки й тару.</p></div>
+      <div class="step"><h4>Довидача</h4><p>Людина з лінії приходить сама, запис на листочку. В 1С потрапляє пізно, через звіти бригад.</p></div>
+      <div class="step"><h4>Серії й партії</h4><p>«Старыми сериями» ставить одну серію на рядок. Не вистачає — помилка, рядок ділиться вручну.</p></div>
+      <div class="step"><h4>Залишки на лініях</h4><p>Бригади здають звіти, але точність не перевірена. «Остаток в производстве» не віднімається.</p></div>
+    </div>
+    <div class="callout">
+      <span class="badge mark">Мета</span>
+      <div class="body"><p><strong>видано на лінію = використано за нормою + залишок на лінії + списання</strong></p></div>
+    </div>
+  </section>
 
-      <path class="arr" d="M180 165H236"/>
-      <path class="arr" d="M410 165H466"/>
-      <path class="arr-acc" d="M690 140L756 70"/>
-      <path class="arr-acc" d="M690 165H756"/>
-      <path class="arr-acc" d="M690 195L756 260"/>
-      <path class="arr" d="M760 280C620 320 260 320 95 214"/>
-      <text class="sm" x="400" y="318" text-anchor="middle">людина вносить або проводить у 1С</text>
-    </svg>
-  </div>
-  <p class="lead" style="margin-top:0">Три джерела правди: 1С (облік), бот (події дня з часом), база знань (норми, запас, правила). Розбіжність між ними — пункт у звіті.</p>
-</section>
+  <section id="safe">
+    <div class="title">
+      <p class="kicker">Принципи</p>
+      <h3>Чому це безпечно для процесу</h3>
+    </div>
+    <div class="grid2">
+      <div class="step"><div class="head"><span class="badge role">1С</span></div><h4>1С не змінюємо</h4><p>Ні конфігурацію, ні дані. Тільки читаємо вивантажені звіти. Excel — це копія, оригінал не чіпається.</p></div>
+      <div class="step"><div class="head"><span class="badge role">Паралельно</span></div><h4>Спершу поруч</h4><p>Склад працює як зараз, ми рахуємо те саме поруч. Помилка в розрахунку — наша, не складу.</p></div>
+      <div class="step"><div class="head"><span class="badge role">Людина</span></div><h4>Рішення за складом</h4><p>Програма готує цифри. Перевіряє, затверджує й проводить документи людина.</p></div>
+      <div class="step"><div class="head"><span class="badge role">Стоп</span></div><h4>Відмова будь-коли</h4><p>Перестали вивантажувати файли — усе як було. Кожна фаза стартує лише після згоди на попередню.</p></div>
+    </div>
+  </section>
 
-<!-- 5 -->
-<section class="slide">
-  <div class="kicker">Щодня</div>
-  <h2>День складу: до і після</h2>
-  <div class="scroll"><table>
-    <tr><th>Задача</th><th>Зараз</th><th>Після</th></tr>
-    <tr><td><b>Замовлення на завтра</b></td><td>Рахується з голови, правки під тару вручну</td><td>Готова таблиця по лініях: норма, залишок, видати, округлено під фасовку. Перевірити й підтвердити</td></tr>
-    <tr><td><b>Лист комплектації</b></td><td>Видалити желе → друк «тісто», навпаки → друк «желе»</td><td>Два листи на телефон з галочками, без друку</td></tr>
-    <tr><td><b>Довидача</b></td><td>Листочок, в 1С пізно</td><td>Бригадир пише в бот, склад тисне «Видано», запис одразу з часом</td></tr>
-    <tr><td><b>Серії</b></td><td>Ділити рядок по партіях вручну</td><td>1С списує сама, найстаріша партія першою (FIFO)</td></tr>
-    <tr><td><b>Звірка</b></td><td>Розбіжність видно в кінці місяця</td><td>Щоранку: де не сходиться і на якому етапі</td></tr>
-  </table></div>
-</section>
+  <section id="how">
+    <div class="title">
+      <p class="kicker">Як працює</p>
+      <h3>Загальна схема</h3>
+    </div>
+    <div class="fig"><svg width="1000" height="340" viewBox="0 0 1000 340" role="img" aria-label="Схема: 1С, вивантаження, сервіс Комірник, звіт і бот ліній"><rect class="bx" x="10" y="120" width="170" height="90"/><text class="t" x="95.0" y="159.0" text-anchor="middle">1С УПП</text><text class="f" x="95.0" y="181.0" text-anchor="middle">лише читання</text><rect class="bx" x="240" y="120" width="170" height="90"/><text class="t" x="325.0" y="159.0" text-anchor="middle">Вивантаження</text><text class="f" x="325.0" y="181.0" text-anchor="middle">Excel → папка RDP</text><rect class="bx em" x="470" y="95" width="220" height="140"/><text class="em" x="580.0" y="137.0" text-anchor="middle">Сервіс Комірник</text><text class="f" x="580.0" y="159.0" text-anchor="middle">норми · запас · правила ліній</text><text class="f" x="580.0" y="181.0" text-anchor="middle">баланс · FIFO · прогноз</text><text class="f" x="580.0" y="203.0" text-anchor="middle">журнал видач</text><rect class="bx" x="760" y="20" width="230" height="80"/><text class="t" x="875.0" y="54.0" text-anchor="middle">Звіт «сходиться / ні»</text><text class="f" x="875.0" y="76.0" text-anchor="middle">щоранку, по лініях</text><rect class="bx" x="760" y="125" width="230" height="80"/><text class="t" x="875.0" y="159.0" text-anchor="middle">Видача на завтра</text><text class="f" x="875.0" y="181.0" text-anchor="middle">тісто / желе, під тару</text><rect class="bx" x="760" y="230" width="230" height="80"/><text class="t" x="875.0" y="264.0" text-anchor="middle">Бот ліній</text><text class="f" x="875.0" y="286.0" text-anchor="middle">довидача, залишки</text><path class="ln" d="M180 165L232.0 165.0"/><path class="ah" d="M240 165L232.0 169.0L232.0 161.0z"/><path class="ln" d="M410 165L462.0 165.0"/><path class="ah" d="M470 165L462.0 169.0L462.0 161.0z"/><path class="ln em" d="M690 130L754.3 65.7"/><path class="ah em" d="M760 60L757.2 68.5L751.5 62.8z"/><path class="ln em" d="M690 165L752.0 165.0"/><path class="ah em" d="M760 165L752.0 169.0L752.0 161.0z"/><path class="ln em" d="M690 200L754.3 264.3"/><path class="ah em" d="M760 270L751.5 267.2L757.2 261.5z"/><path class="ln" d="M760 290C600 335 250 335 100 214"/><path class="ah" d="M95 210L106 214L99 219z"/><text class="f" x="420" y="332" text-anchor="middle">людина вносить або проводить у 1С</text></svg></div>
+    <p class="figcap">Три джерела правди: 1С (облік), бот (події дня з часом), база знань (норми, запас, правила). Розбіжність між ними — пункт у звіті.</p>
+  </section>
 
-<!-- 6 -->
-<section class="slide">
-  <div class="kicker">Фаза 1</div>
-  <div class="phase-row"><span class="pill on">1 · Демо</span><span class="pill">2 · Щодня</span><span class="pill">3 · API</span></div>
-  <h2>Демо на одному дні</h2>
-  <div class="diagram">
-    <svg viewBox="0 0 1000 170" role="img" aria-label="Фаза 1: три ручні вивантаження, скрипт, звіт розбіжностей">
-      <rect class="box" x="10" y="10" width="230" height="44" rx="10"/><text x="125" y="38" text-anchor="middle">Завдання на день</text>
-      <rect class="box" x="10" y="63" width="230" height="44" rx="10"/><text x="125" y="91" text-anchor="middle">Рядки завдань по лініях</text>
-      <rect class="box" x="10" y="116" width="230" height="44" rx="10"/><text x="125" y="144" text-anchor="middle">Требование до правок</text>
-      <path class="arr" d="M240 32L380 78"/><path class="arr" d="M240 85H380"/><path class="arr" d="M240 138L380 92"/>
-      <rect class="box-acc" x="385" y="45" width="230" height="80" rx="12"/><text x="500" y="80" text-anchor="middle">Скрипт звірки</text><text class="sm" x="500" y="102" text-anchor="middle">у нас, не на сервері</text>
-      <path class="arr-acc" d="M615 85H700"/>
-      <rect class="box-ok" x="705" y="45" width="285" height="80" rx="12"/><text x="847" y="80" text-anchor="middle">Звіт розбіжностей</text><text class="sm" x="847" y="102" text-anchor="middle">лінія · інгредієнт · норма · видано</text>
-    </svg>
-  </div>
-  <div class="grid">
-    <div class="card"><h3>Що робимо</h3><ul><li>Ручне «Вывести список» → Excel за 1 день</li><li>Рахуємо норму, порівнюємо з видачею</li><li>Паперовий тест залишків бригад</li></ul></div>
-    <div class="card"><h3>Що потрібно</h3><ul><li>15 хв складу на вивантаження</li><li>Від адміна — нічого</li></ul></div>
-    <div class="card"><h3>Готово, коли</h3><p>Склад і керівник упізнають у звіті свої реальні проблеми.</p></div>
-  </div>
-</section>
+  <section id="day">
+    <div class="title">
+      <p class="kicker">Щодня</p>
+      <h3>День складу: до і після</h3>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Задача</th><th>Зараз</th><th>Після</th></tr></thead>
+        <tbody>
+          <tr><td class="k">Замовлення на завтра</td><td>Рахується з голови, правки під тару вручну</td><td>Готова таблиця по лініях: норма, залишок, видати, округлено під фасовку. Перевірити й підтвердити</td></tr>
+          <tr><td class="k">Лист комплектації</td><td>Видалити желе → друк «тісто», навпаки → друк «желе»</td><td>Два листи на телефон з галочками, без друку</td></tr>
+          <tr><td class="k">Довидача</td><td>Листочок, в 1С пізно</td><td>Бригадир пише в бот, склад тисне «Видано», запис одразу з часом</td></tr>
+          <tr><td class="k">Серії</td><td>Ділити рядок по партіях вручну</td><td>1С списує сама, найстаріша партія першою (FIFO)</td></tr>
+          <tr><td class="k">Звірка</td><td>Розбіжність видно в кінці місяця</td><td>Щоранку: де не сходиться і на якому етапі</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
 
-<!-- 7 -->
-<section class="slide">
-  <div class="kicker">Фаза 2</div>
-  <div class="phase-row"><span class="pill">1 · Демо</span><span class="pill on">2 · Щодня</span><span class="pill">3 · API</span></div>
-  <h2>Щоденний pipeline</h2>
-  <div class="diagram">
-    <svg viewBox="0 0 1000 200" role="img" aria-label="Фаза 2: обробка за розкладом, папка RDP, сервіс, звіти і бот">
-      <rect class="box" x="10" y="60" width="200" height="80" rx="12"/><text x="110" y="95" text-anchor="middle">1С</text><text class="sm" x="110" y="117" text-anchor="middle">обробка за розкладом</text>
-      <path class="arr" d="M210 100H262"/>
-      <rect class="box" x="266" y="60" width="200" height="80" rx="12"/><text x="366" y="95" text-anchor="middle">\\tsclient</text><text class="sm" x="366" y="117" text-anchor="middle">файл через RDP</text>
-      <path class="arr" d="M466 100H518"/>
-      <rect class="box-acc" x="522" y="50" width="200" height="100" rx="12"/><text x="622" y="92" text-anchor="middle">Сервіс</text><text class="sm" x="622" y="114" text-anchor="middle">ранок · обід · вечір</text>
-      <path class="arr-acc" d="M722 80L780 40"/><path class="arr-acc" d="M722 120L780 160"/>
-      <rect class="box-ok" x="785" y="10" width="205" height="60" rx="12"/><text x="887" y="46" text-anchor="middle">Звіт + видача</text>
-      <rect class="box-ok" x="785" y="130" width="205" height="60" rx="12"/><text x="887" y="166" text-anchor="middle">Бот довидачі</text>
-    </svg>
-  </div>
-  <div class="grid">
-    <div class="card"><h3>Що додається</h3><ul><li>Файл щодня сам, без кліків</li><li>Прогноз видачі на завтра</li><li>Бот довидачі для бригадирів</li><li>Лист комплектації на телефоні</li></ul></div>
-    <div class="card"><h3>У 1С вносить людина</h3><p>Р1: список «що внести». Р2 після погодження: Excel у форматі документа → «Загрузить из файла» → перевірила → провела.</p></div>
-    <div class="card"><h3>Готово, коли</h3><p>Щодня є звіт, довидачі не губляться, розбіжності падають тиждень до тижня.</p></div>
-  </div>
-</section>
+  <section id="phases">
+    <div class="title">
+      <p class="kicker">Фази</p>
+      <h3>Три фази: демо, щодня, API</h3>
+    </div>
+    <div class="steps">
+      <div class="step">
+        <div class="head"><span class="badge num">01</span><span class="badge role">Демо</span></div>
+        <h4>Демо на одному дні</h4>
+        <div class="fig"><svg width="1000" height="170" viewBox="0 0 1000 170" role="img" aria-label="Фаза 1: три ручні вивантаження, скрипт, звіт розбіжностей"><rect class="bx" x="10" y="10" width="240" height="44"/><text class="t" x="130.0" y="37.0" text-anchor="middle">Завдання на день</text><rect class="bx" x="10" y="63" width="240" height="44"/><text class="t" x="130.0" y="90.0" text-anchor="middle">Рядки завдань по лініях</text><rect class="bx" x="10" y="116" width="240" height="44"/><text class="t" x="130.0" y="143.0" text-anchor="middle">Требование до правок</text><path class="ln" d="M250 32L377.4 72.6"/><path class="ah" d="M385 75L376.2 76.4L378.6 68.8z"/><path class="ln" d="M250 85L377.0 85.0"/><path class="ah" d="M385 85L377.0 89.0L377.0 81.0z"/><path class="ln" d="M250 138L377.4 97.4"/><path class="ah" d="M385 95L378.6 101.2L376.2 93.6z"/><rect class="bx em" x="385" y="45" width="230" height="80"/><text class="em" x="500.0" y="79.0" text-anchor="middle">Скрипт звірки</text><text class="f" x="500.0" y="101.0" text-anchor="middle">у нас, не на сервері</text><path class="ln em" d="M615 85L697.0 85.0"/><path class="ah em" d="M705 85L697.0 89.0L697.0 81.0z"/><rect class="bx" x="705" y="45" width="295" height="80"/><text class="t" x="852.5" y="79.0" text-anchor="middle">Звіт розбіжностей</text><text class="f" x="852.5" y="101.0" text-anchor="middle">лінія · інгредієнт · норма · видано</text></svg></div>
+        <p><strong>Що робимо</strong></p>
+        <ul class="marks"><li>Ручне «Вывести список» → Excel за 1 день</li><li>Рахуємо норму, порівнюємо з видачею</li><li>Паперовий тест залишків бригад</li></ul>
+        <p><strong>Що потрібно</strong></p>
+        <ul class="marks"><li>15 хв складу на вивантаження</li><li>Від адміна — нічого</li></ul>
+        <p><strong>Готово, коли:</strong> склад і керівник упізнають у звіті свої реальні проблеми.</p>
+      </div>
+      <div class="step">
+        <div class="head"><span class="badge num">02</span><span class="badge role">Щодня</span></div>
+        <h4>Щоденний pipeline</h4>
+        <div class="fig"><svg width="1000" height="200" viewBox="0 0 1000 200" role="img" aria-label="Фаза 2: обробка за розкладом, папка RDP, сервіс, звіти і бот"><rect class="bx" x="10" y="60" width="200" height="80"/><text class="t" x="110.0" y="94.0" text-anchor="middle">1С</text><text class="f" x="110.0" y="116.0" text-anchor="middle">обробка за розкладом</text><path class="ln" d="M210 100L258.0 100.0"/><path class="ah" d="M266 100L258.0 104.0L258.0 96.0z"/><rect class="bx" x="266" y="60" width="200" height="80"/><text class="t" x="366.0" y="94.0" text-anchor="middle">\\tsclient</text><text class="f" x="366.0" y="116.0" text-anchor="middle">файл через RDP</text><path class="ln" d="M466 100L514.0 100.0"/><path class="ah" d="M522 100L514.0 104.0L514.0 96.0z"/><rect class="bx em" x="522" y="50" width="200" height="100"/><text class="em" x="622.0" y="94.0" text-anchor="middle">Сервіс</text><text class="f" x="622.0" y="116.0" text-anchor="middle">ранок · обід · вечір</text><path class="ln em" d="M722 80L778.2 44.3"/><path class="ah em" d="M785 40L780.4 47.7L776.1 40.9z"/><path class="ln em" d="M722 120L778.2 155.7"/><path class="ah em" d="M785 160L776.1 159.1L780.4 152.3z"/><rect class="bx" x="785" y="10" width="205" height="60"/><text class="t" x="887.5" y="45.0" text-anchor="middle">Звіт + видача</text><rect class="bx" x="785" y="130" width="205" height="60"/><text class="t" x="887.5" y="165.0" text-anchor="middle">Бот довидачі</text></svg></div>
+        <p><strong>Що додається</strong></p>
+        <ul class="marks"><li>Файл щодня сам, без кліків</li><li>Прогноз видачі на завтра</li><li>Бот довидачі для бригадирів</li><li>Лист комплектації на телефоні</li></ul>
+        <p><strong>У 1С вносить людина.</strong> Р1: список «що внести». Р2 після погодження: Excel у форматі документа → «Загрузить из файла» → перевірила → провела.</p>
+        <p><strong>Готово, коли:</strong> щодня є звіт, довидачі не губляться, розбіжності падають тиждень до тижня.</p>
+      </div>
+      <div class="step">
+        <div class="head"><span class="badge num">03</span><span class="badge role">API</span></div>
+        <h4>Повний доступ через API</h4>
+        <div class="tw">
+          <table>
+            <thead><tr><th>Коли</th><th>Що відбувається</th><th>Хто</th></tr></thead>
+            <tbody>
+              <tr><td class="k">Вечір D-1</td><td>Сервіс рахує потребу + запас, створює <strong>чернетки</strong> Требований, партії FIFO</td><td>авто</td></tr>
+              <tr><td class="k"></td><td>Перегляд, правка словами («лінії 6 +10% борошна») → затвердити</td><td>склад, 5–10 хв</td></tr>
+              <tr><td class="k">День</td><td>Довидача з бота → документ в 1С одразу</td><td>склад збирає, облік авто</td></tr>
+              <tr><td class="k">Вечір</td><td>Випуск і залишки → списання по партіях → звірка, відхилення з поясненням</td><td>бригадир вводить</td></tr>
+              <tr><td class="k">Тиждень</td><td>Пропозиція нових коефіцієнтів «запасу зверху» з історії довидач</td><td>людина затверджує</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Проведення документів — людиною, поки не довіримо. Окремий користувач з обмеженими правами, спершу тестова копія бази.</p>
+      </div>
+    </div>
+  </section>
 
-<!-- 8 -->
-<section class="slide">
-  <div class="kicker">Фаза 3</div>
-  <div class="phase-row"><span class="pill">1 · Демо</span><span class="pill">2 · Щодня</span><span class="pill on">3 · API</span></div>
-  <h2>Повний доступ через API</h2>
-  <div class="scroll"><table>
-    <tr><th>Коли</th><th>Що відбувається</th><th>Хто</th></tr>
-    <tr><td>Вечір D-1</td><td>Сервіс рахує потребу + запас, створює <b>чернетки</b> Требований, партії FIFO</td><td>авто</td></tr>
-    <tr><td></td><td>Перегляд, правка словами («лінії 6 +10% борошна») → затвердити</td><td>склад, 5–10 хв</td></tr>
-    <tr><td>День</td><td>Довидача з бота → документ в 1С одразу</td><td>склад збирає, облік авто</td></tr>
-    <tr><td>Вечір</td><td>Випуск і залишки → списання по партіях → звірка, відхилення з поясненням</td><td>бригадир вводить</td></tr>
-    <tr><td>Тиждень</td><td>Пропозиція нових коефіцієнтів «запасу зверху» з історії довидач</td><td>людина затверджує</td></tr>
-  </table></div>
-  <p class="lead">Проведення документів — людиною, поки не довіримо. Окремий користувач з обмеженими правами, спершу тестова копія бази.</p>
-</section>
+  <section id="series">
+    <div class="title">
+      <p class="kicker">Швидкий виграш</p>
+      <h3>Серії: віддати FIFO самій 1С</h3>
+    </div>
+    <div class="grid2">
+      <div class="step"><div class="head"><span class="badge role ghost">Зараз</span></div><h4>Борошно 500 кг</h4><p>Roshen 50 + Столичний млин 1000 на залишку. «Старыми сериями» → помилка «Не списано по партиям». Рядок ділиться вручну: 50 + 450.</p></div>
+      <div class="step"><div class="head"><span class="badge role">Після</span></div><h4>Без вибору серії</h4><p>Зняти «Вести партионный учет по сериям» для сировини — 1С списує найстарішу партію першою сама. Постачальник лишається в партії.</p></div>
+      <div class="step"><div class="head"><span class="badge role soft">Як</span></div><h4>Групова обробка</h4><p>Сервис → Групповая обработка справочников: відбір «сировина», одна зміна для всіх. Спершу копія бази, з 1-го числа, з погодженням бухгалтера.</p></div>
+    </div>
+    <div class="callout">
+      <span class="badge mark">Перевірити</span>
+      <div class="body"><p>Облікова політика «ФИФО», а не «По средней»; чи потрібна серія лабораторії й сертифікації.</p></div>
+    </div>
+  </section>
 
-<!-- 9 -->
-<section class="slide">
-  <div class="kicker">Швидкий виграш</div>
-  <h2>Серії: віддати FIFO самій 1С</h2>
-  <div class="grid">
-    <div class="card"><span class="tag t-warn">Зараз</span><h3>Борошно 500 кг</h3><p>Roshen 50 + Столичний млин 1000 на залишку. «Старыми сериями» → помилка «Не списано по партиям». Рядок ділиться вручну: 50 + 450.</p></div>
-    <div class="card"><span class="tag t-ok">Після</span><h3>Без вибору серії</h3><p>Зняти «Вести партионный учет по сериям» для сировини — 1С списує найстарішу партію першою сама. Постачальник лишається в партії.</p></div>
-    <div class="card"><span class="tag t-acc">Як</span><h3>Групова обробка</h3><p>Сервис → Групповая обработка справочников: відбір «сировина», одна зміна для всіх. Спершу копія бази, з 1-го числа, з погодженням бухгалтера.</p></div>
-  </div>
-  <p class="lead">Перевірити: облікова політика «ФИФО», а не «По средней»; чи потрібна серія лабораторії й сертифікації.</p>
-</section>
+  <section id="admin">
+    <div class="title">
+      <p class="kicker">Для адміністратора 1С</p>
+      <h3>Що потрібно і коли</h3>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>Фаза</th><th>Запит</th><th>Ризик для бази</th></tr></thead>
+        <tbody>
+          <tr><td class="k">1</td><td>Нічого. Ручні вивантаження складом</td><td>немає</td></tr>
+          <tr><td class="k">Серії</td><td>Копія бази для тесту, групова обробка номенклатури, погодження бухгалтера</td><td>низький, на копії</td></tr>
+          <tr><td class="k">2</td><td>Дозвіл на зовнішню обробку вивантаження (.epf), користувач <strong>тільки читання</strong>, задача в Планувальнику, перенаправлення папки в RDP</td><td>читання, запису немає</td></tr>
+          <tr><td class="k">3</td><td>Веб-публікація OData / HTTP-сервіси, VPN, окремий користувач з обмеженими правами</td><td>запис лише чернеток, проводить людина</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <span class="badge mark">Відкрито</span>
+      <div class="body"><p>Код обробки й запит відкриті: адмін перевіряє їх до запуску. Нічого не встановлюється на сервер без погодження.</p></div>
+    </div>
+  </section>
 
-<!-- 10 -->
-<section class="slide">
-  <div class="kicker">Для адміністратора 1С</div>
-  <h2>Що потрібно і коли</h2>
-  <div class="scroll"><table>
-    <tr><th>Фаза</th><th>Запит</th><th>Ризик для бази</th></tr>
-    <tr><td>1</td><td>Нічого. Ручні вивантаження складом</td><td>немає</td></tr>
-    <tr><td>Серії</td><td>Копія бази для тесту, групова обробка номенклатури, погодження бухгалтера</td><td>низький, на копії</td></tr>
-    <tr><td>2</td><td>Дозвіл на зовнішню обробку вивантаження (.epf), користувач <b>тільки читання</b>, задача в Планувальнику, перенаправлення папки в RDP</td><td>читання, запису немає</td></tr>
-    <tr><td>3</td><td>Веб-публікація OData / HTTP-сервіси, VPN, окремий користувач з обмеженими правами</td><td>запис лише чернеток, проводить людина</td></tr>
-  </table></div>
-  <p class="lead">Код обробки й запит відкриті: адмін перевіряє їх до запуску. Нічого не встановлюється на сервер без погодження.</p>
-</section>
+  <section id="role">
+    <div class="title">
+      <p class="kicker">Для складу</p>
+      <h3>Що змінюється в ролі</h3>
+    </div>
+    <div class="grid2">
+      <div class="step"><div class="head"><span class="badge role ghost">Було</span></div><h4>Рахувати, записувати, шукати помилки</h4><p>Замовлення з голови, листочки, ручні серії, розбіжності наприкінці місяця.</p></div>
+      <div class="step"><div class="head"><span class="badge role">Стане</span></div><h4>Перевіряти й затверджувати</h4><p>Цифри готові. Будь-яку правку можна зробити — програма запам'ятає причину.</p></div>
+      <div class="step"><div class="head"><span class="badge role soft">На старті</span></div><h4>Два кроки</h4><ul class="marks"><li>Вивантаження за 1 день</li><li>Паперовий тест залишків: кілька днів зважити залишок на лініях і порівняти зі звітом бригади</li></ul></div>
+    </div>
+  </section>
 
-<!-- 11 -->
-<section class="slide">
-  <div class="kicker">Для складу</div>
-  <h2>Що змінюється в ролі</h2>
-  <div class="grid">
-    <div class="card"><span class="tag t-warn">Було</span><h3>Рахувати, записувати, шукати помилки</h3><p>Замовлення з голови, листочки, ручні серії, розбіжності наприкінці місяця.</p></div>
-    <div class="card"><span class="tag t-ok">Стане</span><h3>Перевіряти й затверджувати</h3><p>Цифри готові. Будь-яку правку можна зробити — програма запам'ятає причину.</p></div>
-    <div class="card"><span class="tag t-acc">На старті</span><h3>Два кроки</h3><ul><li>Вивантаження за 1 день</li><li>Паперовий тест залишків: кілька днів зважити залишок на лініях і порівняти зі звітом бригади</li></ul></div>
-  </div>
-</section>
+  <section id="next">
+    <div class="title">
+      <p class="kicker">Далі</p>
+      <h3>Наступні кроки</h3>
+    </div>
+    <div class="tw">
+      <table>
+        <thead><tr><th>#</th><th>Крок</th><th>Хто</th></tr></thead>
+        <tbody>
+          <tr><td class="num">01</td><td>Вивантаження за 1 день: завдання, рядки завдань, Требования до правок</td><td>склад</td></tr>
+          <tr><td class="num">02</td><td>Звіт розбіжностей на цьому дні, показ</td><td>ми</td></tr>
+          <tr><td class="num">03</td><td>Тест серій на копії бази</td><td>адмін + бухгалтер</td></tr>
+          <tr><td class="num">04</td><td>Паперовий тест залишків на 2–3 лініях</td><td>склад + бригадири</td></tr>
+          <tr><td class="num">05</td><td>Рішення про фазу 2: обробка вивантаження, папка RDP, бот</td><td>адмін + керівник</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="callout">
+      <span class="badge mark">Відкриті питання</span>
+      <div class="body"><p>Версія платформи 1С, звідки план на день, чи проводиться «Отчет производства за смену».</p></div>
+    </div>
+  </section>
 
-<!-- 12 -->
-<section class="slide">
-  <div class="kicker">Далі</div>
-  <h2>Наступні кроки</h2>
-  <div class="scroll"><table>
-    <tr><th>#</th><th>Крок</th><th>Хто</th></tr>
-    <tr><td>1</td><td>Вивантаження за 1 день: завдання, рядки завдань, Требования до правок</td><td>склад</td></tr>
-    <tr><td>2</td><td>Звіт розбіжностей на цьому дні, показ</td><td>ми</td></tr>
-    <tr><td>3</td><td>Тест серій на копії бази</td><td>адмін + бухгалтер</td></tr>
-    <tr><td>4</td><td>Паперовий тест залишків на 2–3 лініях</td><td>склад + бригадири</td></tr>
-    <tr><td>5</td><td>Рішення про фазу 2: обробка вивантаження, папка RDP, бот</td><td>адмін + керівник</td></tr>
-  </table></div>
-  <p class="lead">Відкриті питання: версія платформи 1С, звідки план на день, чи проводиться «Отчет производства за смену».</p>
-</section>
+</div>
 
-<nav class="nav" aria-label="Слайди">
-  <button id="prev" aria-label="Попередній">↑</button>
-  <button id="next" aria-label="Наступний">↓</button>
-</nav>
+<footer>
+  <nav class="fnav">
+    <span>©2026 komirnyk</span>
+    <a href="#problem">Проблема</a>
+    <a href="#phases">Фази</a>
+    <a href="#admin">Адміну 1С</a>
+    <a href="#top">Нагору</a>
+  </nav>
+</footer>
 
-<script>
-const slides=[...document.querySelectorAll('.slide')];
-function go(d){
-  const y=window.scrollY+1;
-  const i=slides.findIndex(s=>s.offsetTop+s.offsetHeight>y);
-  const t=slides[Math.min(slides.length-1,Math.max(0,i+d))];
-  t.scrollIntoView({behavior:'smooth'});
-}
-document.getElementById('prev').onclick=()=>go(-1);
-document.getElementById('next').onclick=()=>go(1);
-addEventListener('keydown',e=>{
-  if(['ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();go(1)}
-  if(['ArrowUp','PageUp'].includes(e.key)){e.preventDefault();go(-1)}
-});
-</script>
 </body>
 </html>
