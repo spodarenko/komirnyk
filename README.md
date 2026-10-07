@@ -4,4 +4,4 @@
 
 - `index.html` — одна статична сторінка, без збірки. Відкрити в браузері або GitHub Pages.
 - Навігація: стрілки ↑ ↓, PageUp / PageDown, кнопки справа внизу.
-- Робочі нотатки проєкту лежать поза репо: `Freelance/Delicia/Komirnyk/artifacts/`.
+- Робочі нотатки проєкту лежать поза репо: `Freelance/Delicia/Warehouse/artifacts/`.
