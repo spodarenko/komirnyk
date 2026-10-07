@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Комірник — пітч</title>
+<meta name="description" content="Автоматизація видачі сировини на виробничі лінії: як працює, по фазах, що потрібно від адміна 1С і складу.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f6f4ef; --surface:#ffffff; --ink:#1c1b19; --muted:#6b675f; --line:#dedad1;
+  --accent:#d9480f; --accent-soft:#fde8dc; --ok:#2b8a3e; --ok-soft:#e3f4e6; --warn:#b08900; --warn-soft:#fbf1cc;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141311; --surface:#1d1c19; --ink:#f1eee8; --muted:#a29d93; --line:#34322d;
+    --accent:#ff7a3d; --accent-soft:#3a2216; --ok:#69db7c; --ok-soft:#1b2e1f; --warn:#ffd43b; --warn-soft:#332b12;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141311; --surface:#1d1c19; --ink:#f1eee8; --muted:#a29d93; --line:#34322d;
+  --accent:#ff7a3d; --accent-soft:#3a2216; --ok:#69db7c; --ok-soft:#1b2e1f; --warn:#ffd43b; --warn-soft:#332b12;
+}
+*{box-sizing:border-box;margin:0}
+html{scroll-snap-type:y mandatory;scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 Manrope,system-ui,sans-serif;overflow-x:hidden}
+.slide{min-height:100vh;scroll-snap-align:start;display:flex;flex-direction:column;justify-content:center;
+  padding:64px max(16px,calc((100vw - 1040px)/2));border-bottom:1px solid var(--line)}
+.kicker{font:600 13px/1 "JetBrains Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:14px}
+h1{font-size:clamp(40px,7vw,84px);line-height:1;font-weight:800;letter-spacing:-.03em}
+h2{font-size:clamp(28px,4vw,44px);line-height:1.1;font-weight:800;letter-spacing:-.02em;margin-bottom:24px}
+h3{font-size:18px;font-weight:800;margin-bottom:8px}
+p.lead{font-size:clamp(18px,2.2vw,22px);color:var(--muted);max-width:720px;margin-top:20px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.card p,.card li{color:var(--muted);font-size:15px}
+ul{padding-left:18px}
+li{margin:4px 0}
+.tag{display:inline-block;font:600 12px/1 "JetBrains Mono",monospace;padding:5px 8px;border-radius:6px;margin-bottom:10px}
+.t-ok{background:var(--ok-soft);color:var(--ok)} .t-warn{background:var(--warn-soft);color:var(--warn)} .t-acc{background:var(--accent-soft);color:var(--accent)}
+table{width:100%;border-collapse:collapse;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden;font-size:15px}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 12px/1.2 "JetBrains Mono",monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+.formula{font:600 clamp(15px,2vw,20px)/1.4 "JetBrains Mono",monospace;background:var(--surface);border:1px solid var(--line);
+  border-left:4px solid var(--accent);border-radius:var(--r);padding:18px 20px;margin-top:24px}
+svg{width:100%;height:auto;display:block}
+svg .box{fill:var(--surface);stroke:var(--line);stroke-width:1.5}
+svg .box-acc{fill:var(--accent-soft);stroke:var(--accent);stroke-width:1.5}
+svg .box-ok{fill:var(--ok-soft);stroke:var(--ok);stroke-width:1.5}
+svg text{fill:var(--ink);font:600 14px Manrope,sans-serif}
+svg .sm{fill:var(--muted);font:400 12px Manrope,sans-serif}
+svg .arr{stroke:var(--muted);stroke-width:1.5;fill:none;marker-end:url(#a)}
+svg .arr-acc{stroke:var(--accent);stroke-width:2;fill:none;marker-end:url(#a2)}
+.diagram{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;margin-bottom:20px}
+.nav{position:fixed;right:16px;bottom:16px;display:flex;gap:6px;z-index:5}
+.nav button{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:18px;cursor:pointer}
+.phase-row{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+.pill{font:600 13px/1 "JetBrains Mono",monospace;padding:8px 12px;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.pill.on{background:var(--accent);border-color:var(--accent);color:#fff}
+@media print{.slide{min-height:auto;page-break-after:always}.nav{display:none}}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--muted)"/></marker>
+    <marker id="a2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="var(--accent)"/></marker>
+  </defs>
+</svg>
+
+<!-- 1 -->
+<section class="slide">
+  <div class="kicker">Delicia · склад сировини</div>
+  <h1>Комірник</h1>
+  <p class="lead">Автоматизація видачі сировини на 6 виробничих ліній. Як це працюватиме щодня, по фазах, і що потрібно від адміністратора 1С та складу.</p>
+</section>
+
+<!-- 2 -->
+<section class="slide">
+  <div class="kicker">Проблема</div>
+  <h2>Цифри на початок і на кінець дня не сходяться</h2>
+  <div class="grid">
+    <div class="card"><h3>Замовлення на завтра</h3><p>Норма + «запас зверху» з голови. Кількості в Требовании правляться вручну під мішки й тару.</p></div>
+    <div class="card"><h3>Довидача</h3><p>Людина з лінії приходить сама, запис на листочку. В 1С потрапляє пізно, через звіти бригад.</p></div>
+    <div class="card"><h3>Серії й партії</h3><p>«Старыми сериями» ставить одну серію на рядок. Не вистачає — помилка, рядок ділиться вручну.</p></div>
+    <div class="card"><h3>Залишки на лініях</h3><p>Бригади здають звіти, але точність не перевірена. «Остаток в производстве» не віднімається.</p></div>
+  </div>
+  <div class="formula">Мета: видано на лінію = використано за нормою + залишок на лінії + списання</div>
+</section>
+
+<!-- 3 -->
+<section class="slide">
+  <div class="kicker">Принципи</div>
+  <h2>Чому це безпечно для процесу</h2>
+  <div class="grid">
+    <div class="card"><span class="tag t-ok">1С</span><h3>1С не змінюємо</h3><p>Ні конфігурацію, ні дані. Тільки читаємо вивантажені звіти. Excel — це копія, оригінал не чіпається.</p></div>
+    <div class="card"><span class="tag t-ok">Паралельно</span><h3>Спершу поруч</h3><p>Склад працює як зараз, ми рахуємо те саме поруч. Помилка в розрахунку — наша, не складу.</p></div>
+    <div class="card"><span class="tag t-ok">Людина</span><h3>Рішення за складом</h3><p>Програма готує цифри. Перевіряє, затверджує й проводить документи людина.</p></div>
+    <div class="card"><span class="tag t-ok">Стоп</span><h3>Відмова будь-коли</h3><p>Перестали вивантажувати файли — усе як було. Кожна фаза стартує лише після згоди на попередню.</p></div>
+  </div>
+</section>
+
+<!-- 4 -->
+<section class="slide">
+  <div class="kicker">Як працює</div>
+  <h2>Загальна схема</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 1000 330" role="img" aria-label="Схема: 1С, вивантаження, сервіс Комірник, звіт і бот ліній">
+      <rect class="box" x="10" y="120" width="170" height="90" rx="12"/>
+      <text x="95" y="160" text-anchor="middle">1С УПП</text>
+      <text class="sm" x="95" y="182" text-anchor="middle">лише читання</text>
+
+      <rect class="box" x="240" y="120" width="170" height="90" rx="12"/>
+      <text x="325" y="160" text-anchor="middle">Вивантаження</text>
+      <text class="sm" x="325" y="182" text-anchor="middle">Excel → папка RDP</text>
+
+      <rect class="box-acc" x="470" y="100" width="220" height="130" rx="12"/>
+      <text x="580" y="140" text-anchor="middle">Сервіс Комірник</text>
+      <text class="sm" x="580" y="164" text-anchor="middle">норми · запас · правила ліній</text>
+      <text class="sm" x="580" y="184" text-anchor="middle">баланс · FIFO · прогноз</text>
+      <text class="sm" x="580" y="204" text-anchor="middle">журнал видач</text>
+
+      <rect class="box-ok" x="760" y="20" width="230" height="80" rx="12"/>
+      <text x="875" y="55" text-anchor="middle">Звіт «сходиться / ні»</text>
+      <text class="sm" x="875" y="77" text-anchor="middle">щоранку, по лініях</text>
+
+      <rect class="box-ok" x="760" y="125" width="230" height="80" rx="12"/>
+      <text x="875" y="160" text-anchor="middle">Видача на завтра</text>
+      <text class="sm" x="875" y="182" text-anchor="middle">тісто / желе, під тару</text>
+
+      <rect class="box-ok" x="760" y="230" width="230" height="80" rx="12"/>
+      <text x="875" y="265" text-anchor="middle">Бот ліній</text>
+      <text class="sm" x="875" y="287" text-anchor="middle">довидача, залишки</text>
+
+      <path class="arr" d="M180 165H236"/>
+      <path class="arr" d="M410 165H466"/>
+      <path class="arr-acc" d="M690 140L756 70"/>
+      <path class="arr-acc" d="M690 165H756"/>
+      <path class="arr-acc" d="M690 195L756 260"/>
+      <path class="arr" d="M760 280C620 320 260 320 95 214"/>
+      <text class="sm" x="400" y="318" text-anchor="middle">людина вносить або проводить у 1С</text>
+    </svg>
+  </div>
+  <p class="lead" style="margin-top:0">Три джерела правди: 1С (облік), бот (події дня з часом), база знань (норми, запас, правила). Розбіжність між ними — пункт у звіті.</p>
+</section>
+
+<!-- 5 -->
+<section class="slide">
+  <div class="kicker">Щодня</div>
+  <h2>День складу: до і після</h2>
+  <div class="scroll"><table>
+    <tr><th>Задача</th><th>Зараз</th><th>Після</th></tr>
+    <tr><td><b>Замовлення на завтра</b></td><td>Рахується з голови, правки під тару вручну</td><td>Готова таблиця по лініях: норма, залишок, видати, округлено під фасовку. Перевірити й підтвердити</td></tr>
+    <tr><td><b>Лист комплектації</b></td><td>Видалити желе → друк «тісто», навпаки → друк «желе»</td><td>Два листи на телефон з галочками, без друку</td></tr>
+    <tr><td><b>Довидача</b></td><td>Листочок, в 1С пізно</td><td>Бригадир пише в бот, склад тисне «Видано», запис одразу з часом</td></tr>
+    <tr><td><b>Серії</b></td><td>Ділити рядок по партіях вручну</td><td>1С списує сама, найстаріша партія першою (FIFO)</td></tr>
+    <tr><td><b>Звірка</b></td><td>Розбіжність видно в кінці місяця</td><td>Щоранку: де не сходиться і на якому етапі</td></tr>
+  </table></div>
+</section>
+
+<!-- 6 -->
+<section class="slide">
+  <div class="kicker">Фаза 1</div>
+  <div class="phase-row"><span class="pill on">1 · Демо</span><span class="pill">2 · Щодня</span><span class="pill">3 · API</span></div>
+  <h2>Демо на одному дні</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 1000 170" role="img" aria-label="Фаза 1: три ручні вивантаження, скрипт, звіт розбіжностей">
+      <rect class="box" x="10" y="10" width="230" height="44" rx="10"/><text x="125" y="38" text-anchor="middle">Завдання на день</text>
+      <rect class="box" x="10" y="63" width="230" height="44" rx="10"/><text x="125" y="91" text-anchor="middle">Рядки завдань по лініях</text>
+      <rect class="box" x="10" y="116" width="230" height="44" rx="10"/><text x="125" y="144" text-anchor="middle">Требование до правок</text>
+      <path class="arr" d="M240 32L380 78"/><path class="arr" d="M240 85H380"/><path class="arr" d="M240 138L380 92"/>
+      <rect class="box-acc" x="385" y="45" width="230" height="80" rx="12"/><text x="500" y="80" text-anchor="middle">Скрипт звірки</text><text class="sm" x="500" y="102" text-anchor="middle">у нас, не на сервері</text>
+      <path class="arr-acc" d="M615 85H700"/>
+      <rect class="box-ok" x="705" y="45" width="285" height="80" rx="12"/><text x="847" y="80" text-anchor="middle">Звіт розбіжностей</text><text class="sm" x="847" y="102" text-anchor="middle">лінія · інгредієнт · норма · видано</text>
+    </svg>
+  </div>
+  <div class="grid">
+    <div class="card"><h3>Що робимо</h3><ul><li>Ручне «Вывести список» → Excel за 1 день</li><li>Рахуємо норму, порівнюємо з видачею</li><li>Паперовий тест залишків бригад</li></ul></div>
+    <div class="card"><h3>Що потрібно</h3><ul><li>15 хв складу на вивантаження</li><li>Від адміна — нічого</li></ul></div>
+    <div class="card"><h3>Готово, коли</h3><p>Склад і керівник упізнають у звіті свої реальні проблеми.</p></div>
+  </div>
+</section>
+
+<!-- 7 -->
+<section class="slide">
+  <div class="kicker">Фаза 2</div>
+  <div class="phase-row"><span class="pill">1 · Демо</span><span class="pill on">2 · Щодня</span><span class="pill">3 · API</span></div>
+  <h2>Щоденний pipeline</h2>
+  <div class="diagram">
+    <svg viewBox="0 0 1000 200" role="img" aria-label="Фаза 2: обробка за розкладом, папка RDP, сервіс, звіти і бот">
+      <rect class="box" x="10" y="60" width="200" height="80" rx="12"/><text x="110" y="95" text-anchor="middle">1С</text><text class="sm" x="110" y="117" text-anchor="middle">обробка за розкладом</text>
+      <path class="arr" d="M210 100H262"/>
+      <rect class="box" x="266" y="60" width="200" height="80" rx="12"/><text x="366" y="95" text-anchor="middle">\\tsclient</text><text class="sm" x="366" y="117" text-anchor="middle">файл через RDP</text>
+      <path class="arr" d="M466 100H518"/>
+      <rect class="box-acc" x="522" y="50" width="200" height="100" rx="12"/><text x="622" y="92" text-anchor="middle">Сервіс</text><text class="sm" x="622" y="114" text-anchor="middle">ранок · обід · вечір</text>
+      <path class="arr-acc" d="M722 80L780 40"/><path class="arr-acc" d="M722 120L780 160"/>
+      <rect class="box-ok" x="785" y="10" width="205" height="60" rx="12"/><text x="887" y="46" text-anchor="middle">Звіт + видача</text>
+      <rect class="box-ok" x="785" y="130" width="205" height="60" rx="12"/><text x="887" y="166" text-anchor="middle">Бот довидачі</text>
+    </svg>
+  </div>
+  <div class="grid">
+    <div class="card"><h3>Що додається</h3><ul><li>Файл щодня сам, без кліків</li><li>Прогноз видачі на завтра</li><li>Бот довидачі для бригадирів</li><li>Лист комплектації на телефоні</li></ul></div>
+    <div class="card"><h3>У 1С вносить людина</h3><p>Р1: список «що внести». Р2 після погодження: Excel у форматі документа → «Загрузить из файла» → перевірила → провела.</p></div>
+    <div class="card"><h3>Готово, коли</h3><p>Щодня є звіт, довидачі не губляться, розбіжності падають тиждень до тижня.</p></div>
+  </div>
+</section>
+
+<!-- 8 -->
+<section class="slide">
+  <div class="kicker">Фаза 3</div>
+  <div class="phase-row"><span class="pill">1 · Демо</span><span class="pill">2 · Щодня</span><span class="pill on">3 · API</span></div>
+  <h2>Повний доступ через API</h2>
+  <div class="scroll"><table>
+    <tr><th>Коли</th><th>Що відбувається</th><th>Хто</th></tr>
+    <tr><td>Вечір D-1</td><td>Сервіс рахує потребу + запас, створює <b>чернетки</b> Требований, партії FIFO</td><td>авто</td></tr>
+    <tr><td></td><td>Перегляд, правка словами («лінії 6 +10% борошна») → затвердити</td><td>склад, 5–10 хв</td></tr>
+    <tr><td>День</td><td>Довидача з бота → документ в 1С одразу</td><td>склад збирає, облік авто</td></tr>
+    <tr><td>Вечір</td><td>Випуск і залишки → списання по партіях → звірка, відхилення з поясненням</td><td>бригадир вводить</td></tr>
+    <tr><td>Тиждень</td><td>Пропозиція нових коефіцієнтів «запасу зверху» з історії довидач</td><td>людина затверджує</td></tr>
+  </table></div>
+  <p class="lead">Проведення документів — людиною, поки не довіримо. Окремий користувач з обмеженими правами, спершу тестова копія бази.</p>
+</section>
+
+<!-- 9 -->
+<section class="slide">
+  <div class="kicker">Швидкий виграш</div>
+  <h2>Серії: віддати FIFO самій 1С</h2>
+  <div class="grid">
+    <div class="card"><span class="tag t-warn">Зараз</span><h3>Борошно 500 кг</h3><p>Roshen 50 + Столичний млин 1000 на залишку. «Старыми сериями» → помилка «Не списано по партиям». Рядок ділиться вручну: 50 + 450.</p></div>
+    <div class="card"><span class="tag t-ok">Після</span><h3>Без вибору серії</h3><p>Зняти «Вести партионный учет по сериям» для сировини — 1С списує найстарішу партію першою сама. Постачальник лишається в партії.</p></div>
+    <div class="card"><span class="tag t-acc">Як</span><h3>Групова обробка</h3><p>Сервис → Групповая обработка справочников: відбір «сировина», одна зміна для всіх. Спершу копія бази, з 1-го числа, з погодженням бухгалтера.</p></div>
+  </div>
+  <p class="lead">Перевірити: облікова політика «ФИФО», а не «По средней»; чи потрібна серія лабораторії й сертифікації.</p>
+</section>
+
+<!-- 10 -->
+<section class="slide">
+  <div class="kicker">Для адміністратора 1С</div>
+  <h2>Що потрібно і коли</h2>
+  <div class="scroll"><table>
+    <tr><th>Фаза</th><th>Запит</th><th>Ризик для бази</th></tr>
+    <tr><td>1</td><td>Нічого. Ручні вивантаження складом</td><td>немає</td></tr>
+    <tr><td>Серії</td><td>Копія бази для тесту, групова обробка номенклатури, погодження бухгалтера</td><td>низький, на копії</td></tr>
+    <tr><td>2</td><td>Дозвіл на зовнішню обробку вивантаження (.epf), користувач <b>тільки читання</b>, задача в Планувальнику, перенаправлення папки в RDP</td><td>читання, запису немає</td></tr>
+    <tr><td>3</td><td>Веб-публікація OData / HTTP-сервіси, VPN, окремий користувач з обмеженими правами</td><td>запис лише чернеток, проводить людина</td></tr>
+  </table></div>
+  <p class="lead">Код обробки й запит відкриті: адмін перевіряє їх до запуску. Нічого не встановлюється на сервер без погодження.</p>
+</section>
+
+<!-- 11 -->
+<section class="slide">
+  <div class="kicker">Для складу</div>
+  <h2>Що змінюється в ролі</h2>
+  <div class="grid">
+    <div class="card"><span class="tag t-warn">Було</span><h3>Рахувати, записувати, шукати помилки</h3><p>Замовлення з голови, листочки, ручні серії, розбіжності наприкінці місяця.</p></div>
+    <div class="card"><span class="tag t-ok">Стане</span><h3>Перевіряти й затверджувати</h3><p>Цифри готові. Будь-яку правку можна зробити — програма запам'ятає причину.</p></div>
+    <div class="card"><span class="tag t-acc">На старті</span><h3>Два кроки</h3><ul><li>Вивантаження за 1 день</li><li>Паперовий тест залишків: кілька днів зважити залишок на лініях і порівняти зі звітом бригади</li></ul></div>
+  </div>
+</section>
+
+<!-- 12 -->
+<section class="slide">
+  <div class="kicker">Далі</div>
+  <h2>Наступні кроки</h2>
+  <div class="scroll"><table>
+    <tr><th>#</th><th>Крок</th><th>Хто</th></tr>
+    <tr><td>1</td><td>Вивантаження за 1 день: завдання, рядки завдань, Требования до правок</td><td>склад</td></tr>
+    <tr><td>2</td><td>Звіт розбіжностей на цьому дні, показ</td><td>ми</td></tr>
+    <tr><td>3</td><td>Тест серій на копії бази</td><td>адмін + бухгалтер</td></tr>
+    <tr><td>4</td><td>Паперовий тест залишків на 2–3 лініях</td><td>склад + бригадири</td></tr>
+    <tr><td>5</td><td>Рішення про фазу 2: обробка вивантаження, папка RDP, бот</td><td>адмін + керівник</td></tr>
+  </table></div>
+  <p class="lead">Відкриті питання: версія платформи 1С, звідки план на день, чи проводиться «Отчет производства за смену».</p>
+</section>
+
+<nav class="nav" aria-label="Слайди">
+  <button id="prev" aria-label="Попередній">↑</button>
+  <button id="next" aria-label="Наступний">↓</button>
+</nav>
+
+<script>
+const slides=[...document.querySelectorAll('.slide')];
+function go(d){
+  const y=window.scrollY+1;
+  const i=slides.findIndex(s=>s.offsetTop+s.offsetHeight>y);
+  const t=slides[Math.min(slides.length-1,Math.max(0,i+d))];
+  t.scrollIntoView({behavior:'smooth'});
+}
+document.getElementById('prev').onclick=()=>go(-1);
+document.getElementById('next').onclick=()=>go(1);
+addEventListener('keydown',e=>{
+  if(['ArrowDown','PageDown',' '].includes(e.key)){e.preventDefault();go(1)}
+  if(['ArrowUp','PageUp'].includes(e.key)){e.preventDefault();go(-1)}
+});
+</script>
+</body>
+</html>
